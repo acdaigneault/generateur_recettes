@@ -1,9 +1,7 @@
 import pandas as pd
 from numpy import random
 
-## --- Nombre de recette à générer --- ##
-nb = input("Nombre de recettes à générer (1 à 7) : ")
-nb = int(nb)
+
 
 ## --- Classes & fonction --- ##
 class Ingredient:
@@ -68,6 +66,7 @@ def get_recette_aleatoire(n_recettes, pref, recettes_preference):
     return recette_candidate
 
 
+
 ## --- Crée un dictionnaire pour associer les ingrédients aux sections d'épicerie --- ##
 liste_ingredients = pd.read_csv("ingredients.csv", sep=";")
 dictionnaire_ingredients = dict()
@@ -84,6 +83,56 @@ for recette_info in recettes:
     recette = Recette(recette_info, ingredients, int(recettes[recette_info][1]), recettes[recette_info][0])
     inventaire.add_recette(recette)
 
+
+
+## --- Génération du menu de la semaine --- ##
+menu = []
+noms_recettes = []
+
+# Tri les recettes selon les préférences
+recettes_preference = inventaire.sort_recette_preference()
+
+
+# Permet de choisir des recettes dans le génétateur automatique ou un liste personnalisée
+def choisir_recette(recettes):
+    tag_recette = {}
+    i = 0
+    print('\n-- Inventaire des recettes --')
+    for preference in recettes:
+        for recette in preference:
+            print(i, recette.nom)
+            tag_recette[str(i)] = recette
+            i += 1
+
+    continu = True
+    liste_recette = []
+    while continu == True:
+        j = input("\nChoisir une recette (numéro) : ")
+        liste_recette.append(tag_recette[j])
+
+        k = input("Choisir d'autres recette ? (oui/non) : ")
+        if k == "non":
+            continu = False
+
+    return liste_recette
+
+
+
+
+def check(recette, menu):
+    reponse = input(f"Est-ce que la recette ({recette.nom}) convient? (oui/non) : ")
+
+    if reponse == "oui":
+        menu.append(recette)
+    elif reponse == "non":
+        nouvelle_liste = choisir_recette(recettes_preference)
+
+        for nouvelle_recette in nouvelle_liste:
+            menu.append(nouvelle_recette)
+    else:
+        print("Tu sais pas écrire, alors je décide que oui!")
+        menu.append(recette)
+
 # Ajoute l'historique des 2 dernières semaines (si semaine 1, crée des semaines temporaires)
 historique = pd.DataFrame()
 try:
@@ -94,71 +143,85 @@ except:
     historique["Semaine -2"] = [0, 0, 0, 0, 0, 0, 0]
     historique["Semaine -1"] = [0, 0, 0, 0, 0, 0, 0]
 
-dernieres = list(historique[historique.columns[-1]].dropna())
-avant_dernieres = list(historique[historique.columns[-2]].dropna())
-inventaire.add_dernieres_recettes(dernieres, avant_dernieres)
+def generateur_auto(nb):
+    dernieres = list(historique[historique.columns[-1]].dropna())
+    avant_dernieres = list(historique[historique.columns[-2]].dropna())
+    inventaire.add_dernieres_recettes(dernieres, avant_dernieres)
 
-# Catégories et préférences (WIP)
-#preferences = [0, 1, 2]  # 0 : Souvent | 1 : Normal | 2 : Rarement
-#categories = ["tofu", "lentilles", "viande", "pates", "poissons"]
+    # Catégories et préférences (WIP)
+    #preferences = [0, 1, 2]  # 0 : Souvent | 1 : Normal | 2 : Rarement
+    #categories = ["tofu", "lentilles", "viande", "pates", "poissons"]
 
-## --- Nombre de recette selon la préférence et selon le nombre de recette à générer --- ##
-# [nb préférence 0, nb préférence 1, nb préférence 2]
-liste = []
-if nb == 1:
-    liste = [1, 0, 0]
-elif nb == 2:
-    liste = [1, 1, 0]
-elif nb == 3:
-    liste = [1, 1, 1]
-elif nb == 4:
-    liste = [1, 2, 1]
-elif nb == 5:
-    liste = [2, 2, 1]
-elif nb == 6:
-    liste = [2, 2, 2]
-elif nb == 7:
-    liste = [2, 3, 2]
+    ## --- Nombre de recette selon la préférence et selon le nombre de recette à générer --- ##
+    # [nb préférence 0, nb préférence 1, nb préférence 2]
+    liste = []
+    if nb == 1:
+        liste = [1, 0, 0]
+    elif nb == 2:
+        liste = [1, 1, 0]
+    elif nb == 3:
+        liste = [1, 1, 1]
+    elif nb == 4:
+        liste = [1, 2, 1]
+    elif nb == 5:
+        liste = [2, 2, 1]
+    elif nb == 6:
+        liste = [2, 2, 2]
+    elif nb == 7:
+        liste = [2, 3, 2]
 
 
-## --- Génération du menu de la semaine --- ##
-menu = []
-noms_recettes = []
+    # Loop sur le nombre de recette par préférence
+    for pref, n_preference in enumerate(liste):
+        if n_preference > 0:
+            n_recettes = len(recettes_preference[pref])
 
-# Tri les recettes selon les préférences
-recettes_preference = inventaire.sort_recette_preference()
-
-# Loop sur le nombre de recette par préférence
-for pref, n_preference in enumerate(liste):
-    if n_preference > 0:
-        n_recettes = len(recettes_preference[pref])
-
-        for x in range(0, n_preference):
-            recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
-            while recette_candidate in menu:  # Cherche une recette qui n'est pas déjà dans le menu de la semaine
+            for x in range(0, n_preference):
                 recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
-
-            # Recherche si la recette a été fait dans la/les semaines précédantes selon la préférence
-            if pref == 0:  # Si pref = 0, peut être choisie chaque semaine
-                menu.append(recette_candidate)
-            elif pref == 1:  # Si pas dans la dernière semaine
-                while (recette_candidate.nom in inventaire.dernieres_recettes or
-                       recette_candidate in menu):
+                while recette_candidate in menu:  # Cherche une recette qui n'est pas déjà dans le menu de la semaine
                     recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
 
-                menu.append(recette_candidate)
-            elif pref == 2:  # Si pas dans les deux dernières semaines
-                while (recette_candidate.nom in inventaire.dernieres_recettes or
-                       recette_candidate.nom in inventaire.avant_dernieres_recettes or
-                       recette_candidate in menu):
-                    recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
+                # Recherche si la recette a été fait dans la/les semaines précédantes selon la préférence
+                if pref == 0:  # Si pref = 0, peut être choisie chaque semaine
+                    check(recette_candidate, menu)
+                elif pref == 1:  # Si pas dans la dernière semaine
+                    while (recette_candidate.nom in inventaire.dernieres_recettes or
+                           recette_candidate in menu):
+                        recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
 
-                menu.append(recette_candidate)
+                    check(recette_candidate, menu)
+                elif pref == 2:  # Si pas dans les deux dernières semaines
+                    while (recette_candidate.nom in inventaire.dernieres_recettes or
+                           recette_candidate.nom in inventaire.avant_dernieres_recettes or
+                           recette_candidate in menu):
+                        recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
+
+                    check(recette_candidate, menu)
+
+                # Vérifie si le nombre de recette est bon
+                if len(menu) >= nb:
+                    break
+
+## --- Nombre de recette à générer --- ##
+choix = input("Génétateur automatique (0) ou choisir des recettes (1) : ")
+if choix == "0":
+    nb = input("Nombre de recettes à générer (1 à 7) : ")
+    nb = int(nb)
+    generateur_auto(nb)
+else:
+    recettes = choisir_recette(recettes_preference)
+
+    for recette in recettes:
+        menu.append(recette)
+
 
 ## --- Exporte le menu & enregiste l'historique --- ##
 liste_semaine = []
+print("\n -- Menu de la semaine --")
 for recette in menu:
     liste_semaine.append(recette.nom)
+    print(recette.nom)
+
 
 fichier = open("menu_semaine.txt", "w+")
 fichier.write(" -- Menu de la semaine --\n")
@@ -216,6 +279,8 @@ for section in liste_epicerie:
     fichier.write("\n")
 
 fichier.close()
+
+
 
 
 
