@@ -1,3 +1,4 @@
+0
 import pandas as pd
 from numpy import random
 
@@ -120,18 +121,17 @@ def choisir_recette(recettes):
 
 
 def check(recette, menu):
-    reponse = input(f"Est-ce que la recette ({recette.nom}) convient? (oui/non) : ")
+    reponse = "non"
+    while reponse == "non":
+        reponse = input(f"Est-ce que la recette ({recette.nom}) convient? (oui/non) : ")
 
-    if reponse == "oui":
-        menu.append(recette)
-    elif reponse == "non":
-        nouvelle_liste = choisir_recette(recettes_preference)
+        if reponse == "oui":
+            menu.append(recette)
+        elif reponse == "non":
+            pref_aleatoire =  random.randint(0, 3)
+            recette = get_recette_aleatoire(len(recettes_preference[pref_aleatoire]),
+                                            pref_aleatoire, recettes_preference)
 
-        for nouvelle_recette in nouvelle_liste:
-            menu.append(nouvelle_recette)
-    else:
-        print("Tu sais pas écrire, alors je décide que oui!")
-        menu.append(recette)
 
 # Ajoute l'historique des 2 dernières semaines (si semaine 1, crée des semaines temporaires)
 historique = pd.DataFrame()
@@ -176,7 +176,7 @@ def generateur_auto(nb):
         if n_preference > 0:
             n_recettes = len(recettes_preference[pref])
 
-            for x in range(0, n_preference):
+            while len(menu) < nb:
                 recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
                 while recette_candidate in menu:  # Cherche une recette qui n'est pas déjà dans le menu de la semaine
                     recette_candidate = get_recette_aleatoire(n_recettes, pref, recettes_preference)
@@ -198,9 +198,6 @@ def generateur_auto(nb):
 
                     check(recette_candidate, menu)
 
-                # Vérifie si le nombre de recette est bon
-                if len(menu) >= nb:
-                    break
 
 ## --- Nombre de recette à générer --- ##
 choix = input("Génétateur automatique (0) ou choisir des recettes (1) : ")
